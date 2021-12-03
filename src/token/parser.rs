@@ -345,7 +345,6 @@ impl<'a> Parser<'a> {
                 False,
                 Struct
         }
-        ;
         false
     }
 }
