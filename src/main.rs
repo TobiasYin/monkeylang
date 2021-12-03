@@ -3,7 +3,7 @@ use monkeylang::token;
 static code: &str = "\
 fn main() {
     let x = 5;
-    let y = x + 1;
+    let y = x + 1.25;
     x += 1;
     y += 1;
     let z = \"hello\";

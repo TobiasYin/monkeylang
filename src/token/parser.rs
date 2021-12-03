@@ -259,9 +259,7 @@ impl<'a> Parser<'a> {
                     self.pos += 1;
                 }
                 _ => {
-                    if self.match_bound() {
-                        break;
-                    } else if now == '.' {
+                    if now == '.' {
                         if !is_float {
                             is_float = true;
                             self.pos += 1;
@@ -269,6 +267,8 @@ impl<'a> Parser<'a> {
                         } else {
                             multi_dot = true;
                         }
+                    } else if self.match_bound() {
+                        break;
                     } else {
                         unknown_char = true;
                     }
@@ -344,7 +344,8 @@ impl<'a> Parser<'a> {
                 True,
                 False,
                 Struct
-        };
+        }
+        ;
         false
     }
 }
