@@ -1,4 +1,4 @@
-use crate::token::types::{Token, TokenKind};
+use crate::token::types::{Token, TokenKind, TokenStream};
 use crate::token::types::Number;
 use crate::token::types::Keyword;
 
@@ -6,7 +6,7 @@ struct Parser<'a> {
     raw: &'a str,
     source: Vec<char>,
     pos: usize,
-    tokens: Vec<Token<'a>>,
+    tokens: Vec<Token>,
 }
 
 
@@ -349,7 +349,7 @@ impl<'a> Parser<'a> {
     }
 }
 
-pub fn parse(src: &str) -> Vec<Token> {
+pub fn parse(src: &str) -> TokenStream {
     let mut parser = Parser {
         source: src.chars().collect(),
         raw: src,
@@ -357,5 +357,5 @@ pub fn parse(src: &str) -> Vec<Token> {
         tokens: Vec::new(),
     };
     parser.parse_tokens();
-    parser.tokens
+    TokenStream{tokens: parser.tokens, now_at: 0 }
 }

@@ -1,12 +1,12 @@
-#[derive(Debug)]
-pub struct Token<'a> {
+#[derive(Debug, Clone, Default)]
+pub struct Token {
     pub(crate) kind: TokenKind,
     pub(crate) pos: Position,
-    pub(crate) lex: &'a str,
+    pub(crate) lex: String,
 }
 
-impl<'a> Token<'a> {
-    pub(crate) fn new(kind: TokenKind, src: &'a str, start: usize, end: usize) -> Self {
+impl Token {
+    pub(crate) fn new(kind: TokenKind, src: &str, start: usize, end: usize) -> Self {
         let lex = if end > src.len() || start >= src.len() {
             ""
         } else {
@@ -15,18 +15,29 @@ impl<'a> Token<'a> {
         Self {
             kind,
             pos: Position { start, end },
-            lex,
+            lex: lex.to_string(),
         }
     }
 }
 
-#[derive(Debug)]
+pub struct TokenStream {
+    pub(crate) tokens :Vec<Token>,
+    pub(crate) now_at: usize,
+}
+
+impl TokenStream {
+    pub fn is_end(&self) ->bool {
+        self.tokens.len() <= self.now_at
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 pub(crate) struct Position {
     pub start: usize,
     pub end: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum TokenKind {
     // single character
     LParen,
@@ -110,13 +121,19 @@ pub(crate) enum TokenKind {
     Unknown(String),
 }
 
-#[derive(Debug)]
+impl Default for TokenKind {
+    fn default() -> Self {
+        TokenKind::Unknown("default".to_string())
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum Number {
     Float,
     Int,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Keyword {
     Let,
     For,
