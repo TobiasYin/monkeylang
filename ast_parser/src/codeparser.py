@@ -1,3 +1,7 @@
+import re
+import time
+
+
 class RepeatType:
     No = 0
     Any = 1
@@ -46,10 +50,10 @@ def get_match_type(data):
     target = None
     if len(data) > 1:
         target = data[1]
-    if first.startswith("Token::"):
-        return MatchType(MatchType.Token, first[len("Token::"):], target)
+    if first.startswith("Ast::"):
+        return MatchType(MatchType.SubMatch, first[len("Ast::"):], target)
     else:
-        return MatchType(MatchType.SubMatch, first, target)
+        return MatchType(MatchType.Token, first, target)
 
 
 class CodeDefine:
@@ -454,7 +458,7 @@ class DFA:
             now_state = self.state[now_state][c]
         return now_state in self.ends
 
-    def generate(self, struct_name):
+    def generate(self, struct_name, is_enum=False):
         def add_ident(code, ident=1):
             lines = code.split("\n")
             return "\n".join(["    " * ident + line for line in lines if line]) + "\n"
@@ -477,6 +481,8 @@ class DFA:
             if len(items) == 1:
                 return items[0]
             if len(items) == 2:
+                if items[1] == "_":
+                    return f"{items[0]}(_)"
                 return f"{items[0]}({items[0]}::{items[1]})"
             return f"{items[0]}({items[0]}::{generate_ref(items[1:])})"
 
@@ -502,11 +508,16 @@ class DFA:
                 buf += add_ident(f"state = {self.state[state][cond]};")
                 if cond.kind == MatchType.Token:
                     buf += add_ident(generate_to_next())
+                if is_enum:
+                    if not cond.target:
+                        cond.target = cond.value
                 if cond.target:
                     t = "item"
                     if cond.kind == MatchType.Token:
-                        t = "top.lex.to_string()"
-                    if cond.target[0] == '.':
+                        t = "top.clone()"
+                    if is_enum:
+                        buf += add_ident(f"res = {struct_name}::{cond.target}({t});")
+                    elif cond.target[0] == '.':
                         target = cond.target[1:]
                         buf += add_ident(f"res.{target}.push({t});")
                     else:
@@ -517,7 +528,7 @@ class DFA:
             code += add_ident(buf)
             if len(self.state[state]) != 0:
                 code += add_ident(generate_get_now())
-                code += add_ident("stream.now_at = now;\nreturn Err(format!(\"Unexpected Token, got {:?}\", top.kind))")
+                code += add_ident(f"stream.now_at = now;\nreturn Err(format!(\"Unexpected Token, got {{:?}} now: {state} \", top.kind))")
             code += "}\n"
             return code
 
@@ -553,7 +564,7 @@ def regex(reg):
 
 
 def is_bound(c):
-    return c in [' ', '?', '*', '\t', '\n', '\r', '+', '(', ')']
+    return is_space(c) or c in ['?', '*', '+', '(', ')', '|']
 
 
 def is_space(c):
@@ -561,6 +572,8 @@ def is_space(c):
 
 
 def parse_code_defines(defines):
+    defines = defines.replace("->", " -> ")
+
     tokens = []
     now = ""
     for i in defines:
@@ -579,6 +592,9 @@ def parse_code_defines(defines):
     to_merge = False
     for i in tokens:
         if is_bound(i):
+            if now_item:
+                real_tokens.append((now_item,))
+                now_item = None
             real_tokens.append(i)
             continue
         if to_merge:
@@ -603,7 +619,6 @@ def parse_code_defines(defines):
     return tuple(real_tokens)
 
 
-def parse_and_gen(reg, struct_name):
-    reg = reg.replace("->", " -> ")
+def parse_and_gen(reg, struct_name, is_enum = False):
     r = regex(reg)
-    return r.generate(struct_name)
+    return r.generate(struct_name, is_enum)
