@@ -37,7 +37,7 @@ pub struct Block {
 }
 
 #[derive(Default, Debug)]
-// #[parser("")]
+#[parser("(Ast::Expression -> expr) ? Semi")]
 pub struct Statement{
     // TODO
     expr: Expression
@@ -45,46 +45,45 @@ pub struct Statement{
 
 
 #[derive(Debug)]
-// #[parser("Ast::PlusExpression | Ast::MinusExpression")]
+#[parser()]
 pub enum Expression{
+    NumberExpression(NumberExpression),
     PlusExpression(PlusExpression),
     MinusExpression(MinusExpression),
 
-    BadExpression(String),
-}
-
-
-impl Default for Expression{
-    fn default() -> Self {
-        Expression::BadExpression("default".to_string())
-    }
+    BadExpression
 }
 
 #[derive(Default, Debug)]
-#[parser("Number::_ Plus Number::_")]
+#[parser("Number::_->number")]
+pub struct NumberExpression{
+    number: Token
+}
+
+
+#[derive(Default, Debug)]
+#[parser("Ast::Expression -> !left Plus Ast::Expression -> !right")]
 pub struct PlusExpression {
-    left: Token,
-    right: Token,
+    left: Box<Expression>,
+    right: Box<Expression>,
 }
 
 #[derive(Default, Debug)]
-#[parser("Number::_ Plus Number::_")]
+#[parser("Ast::Expression -> !left Minus Ast::Expression -> !right")]
 pub struct MinusExpression {
-    left: Token,
-    right: Token,
-}
-
-impl Parser for Statement {
-    type Output = Statement;
-
-    fn parse(_stream: &mut TokenStream) -> Result<Self::Output, String> {
-        return Ok(Statement::default());
-    }
+    left: Box<Expression>,
+    right: Box<Expression>,
 }
 
 
 pub fn parse_fn(stream: &mut TokenStream) -> Result<(), String> {
     let f = FnDeclaration::parse(stream)?;
+    println!("{:?}", f);
+    Ok(())
+}
+
+pub fn parse_demo(stream: &mut TokenStream) -> Result<(), String> {
+    let f = Statement::parse(stream).unwrap();
     println!("{:?}", f);
     Ok(())
 }

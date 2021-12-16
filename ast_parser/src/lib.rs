@@ -30,12 +30,19 @@ fn _parser(attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
     let struct_name = input.ident.to_string();
     let mut is_enum = false;
     let mut has_bad = false;
+    let mut attr_str = attr.to_string();
     if let syn::Data::Enum(ref mut data) = input.data {
         is_enum = true;
+        let mut kind = Vec::new();
         for var in data.variants.iter() {
             if var.ident.to_string().starts_with("Bad"){
                 has_bad = true;
+            }else {
+                kind.push("Ast::".to_string() + &var.ident.to_string());
             }
+        }
+        if attr_str.is_empty(){
+            attr_str =  format!("\"{}\"", kind.join(" | "));
         }
         if !has_bad{
             let name = "Bad".to_string() + &struct_name;
@@ -50,7 +57,7 @@ fn _parser(attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
     }
     let code = Python::with_gil(|py| -> Result<String, Box<dyn Error>> {
         py.run(&get_py_code(), None, None)?;
-        let code: String = py.eval(&get_py_code1(&attr.to_string(), &input.ident.to_string(), is_enum), None, None)?.extract()?;
+        let code: String = py.eval(&get_py_code1(&attr_str, &input.ident.to_string(), is_enum), None, None)?.extract()?;
         Ok(code)
     }).unwrap();
     let mut stream = TokenStream2::new();
@@ -58,7 +65,7 @@ fn _parser(attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
     let stream2: TokenStream2 = code.parse().unwrap();
     stream.append_all(stream2);
 
-    if !has_bad{
+    if is_enum {
         let name = syn::Ident::new(&("Bad".to_string() + &struct_name), input.ident.span());
         let struct_name = syn::Ident::new( &struct_name, input.ident.span());
         let s = quote!{

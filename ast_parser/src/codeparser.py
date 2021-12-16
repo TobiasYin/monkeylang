@@ -520,6 +520,9 @@ class DFA:
                     elif cond.target[0] == '.':
                         target = cond.target[1:]
                         buf += add_ident(f"res.{target}.push({t});")
+                    elif cond.target[0] == '!':
+                        target = cond.target[1:]
+                        buf += add_ident(f"res.{target} = Box::new({t});")
                     else:
                         buf += add_ident(f"res.{cond.target} = {t};")
                 buf += add_ident("continue")
@@ -528,7 +531,7 @@ class DFA:
             code += add_ident(buf)
             if len(self.state[state]) != 0:
                 code += add_ident(generate_get_now())
-                code += add_ident(f"stream.now_at = now;\nreturn Err(format!(\"Unexpected Token, got {{:?}} now: {state} \", top.kind))")
+                code += add_ident(f"stream.now_at = now;\nreturn Err(format!(\"Unexpected Token, got {{:?}} now: {state}, matching: {struct_name}\", top.kind))")
             code += "}\n"
             return code
 
